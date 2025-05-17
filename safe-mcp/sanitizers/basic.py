@@ -5,7 +5,7 @@ Basic sanitizer for detecting common attacks.
 import re
 from typing import Any, List, Tuple
 
-from src.sanitizers import SanitizerBase
+from ..sanitizers import SanitizerBase
 
 
 class BasicSanitizer(SanitizerBase):

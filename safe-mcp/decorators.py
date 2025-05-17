@@ -6,7 +6,7 @@ import functools
 import time
 from typing import Any, Callable, Dict, Optional, TypeVar
 
-from src.core import SecuredResponse, TrustLevel
+from .core import SecuredResponse, TrustLevel
 
 # Type variable for functions
 T = TypeVar("T", bound=Callable[..., Any])
