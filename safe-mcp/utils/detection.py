@@ -143,7 +143,7 @@ def contains_control_characters(content: str) -> bool:
     return any(ord(c) < 32 and c not in "\n\r\t" for c in normalized_content)
 
 
-def remove_control_characters(content: str) -> str:
+def remove_control_characters(content: str) -> Tuple[str, List[str]]:
     """
     Removes control characters from content (excluding tab, LF, CR)
     after NFKC normalization. (This is already a sanitization utility)
@@ -155,9 +155,11 @@ def remove_control_characters(content: str) -> str:
         Content with control characters removed.
     """
     if not isinstance(content, str):
-        return content
+        return content, ["Input is not a valid string"]
     try:
         normalized_content = unicodedata.normalize("NFKC", content)
     except TypeError:
-        return content  # Or raise an error
-    return "".join(c for c in normalized_content if ord(c) >= 32 or c in "\n\r\t")
+        return content, [
+            "Error during Unicode normalization in control character removal"
+        ]
+    return "".join(c for c in normalized_content if ord(c) >= 32 or c in "\n\r\t"), []

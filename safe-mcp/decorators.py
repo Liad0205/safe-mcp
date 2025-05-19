@@ -3,10 +3,11 @@ Decorators for securing MCP tool functions.
 """
 
 import functools
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, Optional, TypeVar, List, Tuple
 
 from .core import SecuredResponse, TrustLevel
 from .utils.utils import determine_trust_level
+from .sanitizers.basic import BasicSanitizer
 
 
 T = TypeVar("T", bound=Callable[..., Any])
@@ -67,7 +68,11 @@ def unsafe(func: T) -> T:
     return wrapper
 
 
-def sanitize(sanitizer_func: Optional[Callable] = None):
+def sanitize(
+    sanitizer_func: Optional[
+        Callable[[Any], Tuple[Any, List[str]]]
+    ] = BasicSanitizer.sanitize,
+):
     """
     Apply sanitization to function results and adjust trust level.
 
@@ -76,8 +81,10 @@ def sanitize(sanitizer_func: Optional[Callable] = None):
     appropriate trust level and warnings.
 
     Args:
-        sanitizer_func: Function that takes content and returns (sanitized_content, warnings)
-            If None, no sanitization is performed but result is still wrapped
+        sanitizer_func: Function that takes content and returns (sanitized_content, warnings).
+            If None is explicitly passed, no sanitization is performed but the result is
+            still wrapped and a warning is added.
+            Defaults to BasicSanitizer.sanitize with default settings.
 
     Returns:
         Decorator function that applies sanitization
@@ -102,7 +109,7 @@ def sanitize(sanitizer_func: Optional[Callable] = None):
                 sanitized_data, new_warnings = sanitizer_func(data)
                 warnings.extend(new_warnings)
 
-                trust_level = determine_trust_level(original_trust, warnings)
+                trust_level = determine_trust_level(original_trust, new_warnings)
 
                 return SecuredResponse(
                     data=sanitized_data,
@@ -110,10 +117,11 @@ def sanitize(sanitizer_func: Optional[Callable] = None):
                     warnings=warnings,
                 )
             else:
+                # This path is taken if sanitizer_func is explicitly set to None
                 return SecuredResponse(
                     data=data,
                     trust_level=original_trust,
-                    warnings=warnings + ["No sanitization applied"],
+                    warnings=warnings + ["Sanitization explicitly skipped."],
                 )
 
         return wrapper

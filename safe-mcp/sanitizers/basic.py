@@ -16,34 +16,29 @@ from ..utils.detection import (
 class BasicSanitizer(SanitizerBase):
     """
     Basic sanitization using a sequence of core sanitization routines.
+    Provides a static `sanitize` method for default sanitization.
 
-    This sanitizer applies in order:
+    The static `sanitize` method applies in order:
     - Control character removal
     - Prompt injection sanitization (filters matches)
     - Jailbreak attempt sanitization (filters matches)
-    - Hidden encoding detection (warns, optionally filters if configured)
+    - Hidden encoding detection (warns, optionally filters if configured via parameter)
 
-    It relies on Unicode normalization (NFKC) performed within each routine.
+    It relies on Unicode normalization (NFKC) performed within some routines.
     """
 
-    def __init__(self, filter_detected_encodings: bool = False):
-        """
-        Initialize the basic sanitizer.
-
-        Args:
-            filter_detected_encodings: If True, detected encoding patterns will
-                                       also be filtered with '[FILTERED]'.
-                                       Defaults to False (warn only).
-        """
-        self.filter_detected_encodings = filter_detected_encodings
-
-    def sanitize(self, content: Any) -> Tuple[Any, List[str]]:
+    @staticmethod
+    def sanitize(
+        content: Any, filter_detected_encodings: bool = False
+    ) -> Tuple[Any, List[str]]:
         """
         Apply a sequence of basic sanitization routines to the content.
 
         Args:
             content: Text content to sanitize.
-
+            filter_detected_encodings: If True, detected encoding patterns will
+                                       also be filtered with '[FILTERED]'.
+                                       Defaults to False (warn only).
         Returns:
             Tuple of (sanitized_content, warnings).
         """
@@ -54,10 +49,9 @@ class BasicSanitizer(SanitizerBase):
         sanitized_content = content
 
         # 1. Remove Control Characters (first, to clean input for subsequent regex)
-        content_before_control_removal = sanitized_content
-        sanitized_content = remove_control_characters(sanitized_content)
-        if sanitized_content != content_before_control_removal:
-            all_warnings.append("Control characters removed.")
+        # Assuming remove_control_characters now returns (str, List[str])
+        sanitized_content, cc_warnings = remove_control_characters(sanitized_content)
+        all_warnings.extend(cc_warnings)
 
         # 2. Sanitize Prompt Injection
         sanitized_content, pi_warnings = sanitize_prompt_injection(sanitized_content)
@@ -68,8 +62,9 @@ class BasicSanitizer(SanitizerBase):
         all_warnings.extend(jb_warnings)
 
         # 4. Sanitize/Detect Hidden Encoding
+        # By default, this will only warn about detected encodings.
         sanitized_content, enc_warnings = sanitize_hidden_encoding(
-            sanitized_content, filter_encoded=self.filter_detected_encodings
+            sanitized_content, filter_encoded=filter_detected_encodings
         )
         all_warnings.extend(enc_warnings)
 
