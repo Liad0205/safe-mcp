@@ -14,9 +14,9 @@ class TrustLevel(str, Enum):
     These levels help the LLM understand how much to trust data from MCP tools.
     """
 
-    SAFE = "safe"  # Developer-verified trusted source
+    TRUSTED = "trusted"  # Developer-verified trusted source
     CAUTION = "caution"  # Use with care - potentially problematic
-    UNSAFE = "unsafe"  # Known problematic source
+    UNTRUSTED = "untrusted"  # Unknown or external source, likely unsafe
 
 
 class SecuredResponse(BaseModel):
@@ -37,5 +37,5 @@ class SecuredResponse(BaseModel):
 
         Ensures that unsafe responses always have warnings explaining why.
         """
-        if self.trust_level == TrustLevel.UNSAFE and not self.warnings:
+        if self.trust_level == TrustLevel.UNTRUSTED and not self.warnings:
             self.warnings = ["Data from untrusted source"]

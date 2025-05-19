@@ -3,10 +3,10 @@ Decorators for securing MCP tool functions.
 """
 
 import functools
-import time
-from typing import Any, Callable, Dict, Optional, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 from .core import SecuredResponse, TrustLevel
+from .utils.utils import determine_trust_level
 
 # Type variable for functions
 T = TypeVar("T", bound=Callable[..., Any])
@@ -23,7 +23,7 @@ def safe(func: T) -> T:
         func: The function to decorate
 
     Returns:
-        Decorated function that returns a SecuredResponse with SAFE trust level
+        Decorated function that returns a SecuredResponse with TRUSTED trust level
     """
 
     @functools.wraps(func)
@@ -32,7 +32,7 @@ def safe(func: T) -> T:
         # If result is already a SecuredResponse, return it as is
         if isinstance(result, SecuredResponse):
             return result
-        return SecuredResponse(data=result, trust_level=TrustLevel.SAFE)
+        return SecuredResponse(data=result, trust_level=TrustLevel.TRUSTED)
 
     return wrapper
 
@@ -48,18 +48,19 @@ def unsafe(func: T) -> T:
         func: The function to decorate
 
     Returns:
-        Decorated function that returns a SecuredResponse with UNSAFE trust level
+        Decorated function that returns a SecuredResponse with UNTRUSTED trust level
     """
 
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
         result = await func(*args, **kwargs)
-        # If result is already a SecuredResponse, return it as is
+        # If result is already a SecuredResponse, return it as is for consistency
+        # This will allow annotation chaining
         if isinstance(result, SecuredResponse):
             return result
         return SecuredResponse(
             data=result,
-            trust_level=TrustLevel.UNSAFE,
+            trust_level=TrustLevel.UNTRUSTED,
             warnings=["Data from untrusted external source"],
         )
 
@@ -87,30 +88,31 @@ def sanitize(sanitizer_func: Optional[Callable] = None):
         async def wrapper(*args, **kwargs):
             result = await func(*args, **kwargs)
 
-            # If already a SecuredResponse, extract the data
             if isinstance(result, SecuredResponse):
                 data = result.data
                 existing_warnings = result.warnings
+                original_trust = result.trust_level
             else:
                 data = result
                 existing_warnings = []
+                original_trust = TrustLevel.UNTRUSTED  # Default to untrusted
 
-            # Apply sanitization if a sanitizer was provided
             warnings = list(existing_warnings)
             if sanitizer_func:
                 sanitized_data, new_warnings = sanitizer_func(data)
                 warnings.extend(new_warnings)
 
+                trust_level = determine_trust_level(original_trust, warnings)
+
                 return SecuredResponse(
                     data=sanitized_data,
-                    trust_level=TrustLevel.CAUTION if new_warnings else TrustLevel.SAFE,
+                    trust_level=trust_level,
                     warnings=warnings,
                 )
             else:
-                # No sanitization applied
                 return SecuredResponse(
                     data=data,
-                    trust_level=TrustLevel.CAUTION,
+                    trust_level=original_trust,
                     warnings=warnings + ["No sanitization applied"],
                 )
 
@@ -137,22 +139,19 @@ def validate_inputs(validator_func: Callable):
     def decorator(func: T) -> T:
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
-            # Run validation
             valid = validator_func(*args, **kwargs)
 
             if not valid:
                 return SecuredResponse(
-                    data=None,
-                    trust_level=TrustLevel.UNSAFE,
+                    data=None,  # Block response on input validation failure
+                    trust_level=TrustLevel.UNTRUSTED,
                     warnings=["Input validation failed"],
                 )
 
-            # Proceed with function execution
             result = await func(*args, **kwargs)
 
-            # If not already a SecuredResponse, wrap it
             if not isinstance(result, SecuredResponse):
-                result = SecuredResponse(data=result, trust_level=TrustLevel.SAFE)
+                result = SecuredResponse(data=result, trust_level=TrustLevel.TRUSTED)
 
             return result
 
