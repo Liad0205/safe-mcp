@@ -8,7 +8,7 @@ from typing import Any, Callable, Optional, TypeVar
 from .core import SecuredResponse, TrustLevel
 from .utils.utils import determine_trust_level
 
-# Type variable for functions
+
 T = TypeVar("T", bound=Callable[..., Any])
 
 
@@ -151,7 +151,7 @@ def validate_inputs(validator_func: Callable):
             result = await func(*args, **kwargs)
 
             if not isinstance(result, SecuredResponse):
-                result = SecuredResponse(data=result, trust_level=TrustLevel.TRUSTED)
+                result = SecuredResponse(data=result, trust_level=TrustLevel.UNTRUSTED)
 
             return result
 

@@ -13,12 +13,12 @@ def determine_trust_level(prior_trust: TrustLevel, new_warnings: list) -> TrustL
     Returns:
         The determined trust level
     """
+    if not new_warnings:
+        # Maintain prior trust if there are no new warnings
+        return prior_trust
+
+    # Downgrade trust level since we saw new warnings
     if prior_trust == TrustLevel.TRUSTED:
-        # If the prior trust is trusted, we only downgrade to caution if there are new warnings
-        return TrustLevel.TRUSTED if len(new_warnings) == 0 else TrustLevel.CAUTION
-    elif prior_trust == TrustLevel.UNTRUSTED:
-        # If the prior trust is untrusted, we only upgrade to caution if there are no new warnings
-        return TrustLevel.CAUTION if len(new_warnings) == 0 else TrustLevel.UNTRUSTED
-    else:
-        # If the prior trust is caution, we maintain caution unless there are new warnings
-        return TrustLevel.CAUTION if len(new_warnings) == 0 else TrustLevel.UNTRUSTED
+        return TrustLevel.CAUTION
+
+    return TrustLevel.UNTRUSTED
