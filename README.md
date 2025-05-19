@@ -22,8 +22,18 @@ Secure your Model Context Protocol (MCP) servers against context poisoning, prom
 
 ## Installation
 
+> **Note:**  
+> `safe-mcp` is not yet published on PyPI.  
+> You can install it directly from the repository:
+
 ```bash
-uv pip install safe-mcp
+uv pip install git+https://github.com/Liad0205/safe-mcp
+```
+
+Or, if you have a local copy:
+
+```bash
+uv pip install /path/to/safe-mcp
 ```
 
 ## Quick Start
