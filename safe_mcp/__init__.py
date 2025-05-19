@@ -6,7 +6,7 @@ and other security threats when using external data.
 """
 
 from .core import SecuredResponse, TrustLevel
-from .decorators import safe, unsafe, sanitize, validate_inputs, rate_limited
+from .decorators import safe, unsafe, sanitize, validate_inputs
 
 __all__ = [
     "SecuredResponse",
@@ -15,7 +15,6 @@ __all__ = [
     "unsafe",
     "sanitize",
     "validate_inputs",
-    "rate_limited",
 ]
 
 __version__ = "0.1.0"
