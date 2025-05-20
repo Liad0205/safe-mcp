@@ -10,6 +10,7 @@ from ..utils.detection import (
     sanitize_jailbreak_attempts,
     sanitize_hidden_encoding,
     remove_control_characters,
+    normalize_and_sanitize_confusables,
 )
 
 
@@ -46,7 +47,10 @@ class BasicSanitizer(SanitizerBase):
             return content, []
 
         all_warnings: List[str] = []
-        sanitized_content = content
+
+        # 0. Normalize Unicode (NFKC)
+        sanitized_content, cc_warnings = normalize_and_sanitize_confusables(content)
+        all_warnings.extend(cc_warnings)
 
         # 1. Remove Control Characters (first, to clean input for subsequent regex)
         # Assuming remove_control_characters now returns (str, List[str])

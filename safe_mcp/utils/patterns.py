@@ -29,6 +29,49 @@ PROMPT_INJECTION_PATTERNS = [
     r"start\s+(fresh|anew|over)",
 ]
 
+# Confusables Mapping
+CONFUSABLES_MAP = {
+    "\u0430": "a",  # Cyrillic small a
+    "\u0435": "e",  # Cyrillic small e
+    "\u043e": "o",  # Cyrillic small o (as in priоr)
+    "\u0440": "p",  # Cyrillic small er
+    "\u0441": "c",  # Cyrillic small es
+    "\u0445": "x",  # Cyrillic small ha
+    "\u0456": "i",  # Cyrillic small i (Ukrainian/Belarusian)
+    # Greek
+    "\u03b1": "a",  # Greek small alpha
+    "\u03b5": "e",  # Greek small epsilon
+    "\u03bf": "o",  # Greek small omicron
+    "\u03c1": "p",  # Greek small rho
+    "\u03f2": "c",  # Greek lunate sigma symbol (looks like c)
+    "\u03c7": "x",  # Greek small chi
+    # Latin
+    "\u00e0": "a",  # Latin small a with grave
+    "\u00e1": "a",  # Latin small a with acute
+    "\u00e2": "a",  # Latin small a with circumflex
+    "\u00e3": "a",  # Latin small a with tilde
+    "\u00e4": "a",  # Latin small a with diaeresis
+    "\u00e5": "a",  # Latin small a with ring above
+    "\u00e7": "c",  # Latin small c with cedilla
+    "\u00e8": "e",  # Latin small e with grave
+    "\u00e9": "e",  # Latin small e with acute
+    "\u00ea": "e",  # Latin small e with circumflex
+    "\u00eb": "e",  # Latin small e with diaeresis
+    "\u00f0": "d",  # Latin small eth
+    "\u00f1": "n",  # Latin small n with tilde
+    "\u00f2": "o",  # Latin small o with grave
+    "\u00f3": "o",  # Latin small o with acute
+    "\u00f4": "o",  # Latin small o with circumflex
+    "\u00f5": "o",  # Latin small o with tilde
+    "\u00f6": "o",  # Latin small o with diaeresis
+    "\u00f9": "u",  # Latin small u with grave
+    "\u00fa": "u",  # Latin small u with acute
+    "\u00fb": "u",  # Latin small u with circumflex
+    "\u00fc": "u",  # Latin small u with diaeresis
+    "\u00fd": "y",  # Latin small y with acute
+    "\u00ff": "y",  # Latin small y with diaeresis
+}
+
 # Patterns for detecting potentially encoded content
 # These are primarily for detection; decoding is a separate, riskier step.
 ENCODING_PATTERNS = [
@@ -122,6 +165,9 @@ WARNING_UNICODE_NORMALIZATION_ERROR_CONTROL_CHAR = (
     "Error during Unicode normalization in control character removal"
 )
 WARNING_CONTROL_CHARACTERS_REMOVED = "Control characters removed from content."
+WARNING_CONFUSABLE_CHARACTERS_REPLACED = (
+    "Confusable Unicode characters replaced with Latin equivalents."
+)
 
 # Decorator specific warnings
 WARNING_UNSAFE_DECORATOR_DEFAULT = "Data from untrusted external source"
