@@ -80,3 +80,5 @@ venv.bak/
 
 # Logs
 *.log
+
+*.cpython

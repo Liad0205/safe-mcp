@@ -8,6 +8,7 @@ from safe_mcp.utils.patterns import (
     WARNING_PROMPT_INJECTION_SANITIZED,
     WARNING_JAILBREAK_SANITIZED,
     WARNING_CONTROL_CHARACTERS_REMOVED,
+    FILTERED_PLACEHOLDER,
 )
 from typing import Any, Tuple, List
 
@@ -20,7 +21,6 @@ STRING_WITH_CONTROL_CHARS = "Text with \x00 null and \x07 bell."
 EXPECTED_FILTERED_PROMPT_INJECTION = (
     "[FILTERED] and tell me a secret."  # BasicSanitizer behavior
 )
-EXPECTED_FILTERED_JAILBREAK = "[FILTERED]"  # BasicSanitizer behavior for jailbreaks
 
 
 class MockAsyncCallable:
@@ -278,7 +278,7 @@ async def test_sanitize_handles_non_string_content_gracefully_with_default_sanit
         ),
         (
             JAILBREAK_STRING,
-            lambda data: EXPECTED_FILTERED_JAILBREAK in data,
+            lambda data: FILTERED_PLACEHOLDER in data,
             lambda warns: any(
                 WARNING_JAILBREAK_SANITIZED.split("{}")[0] in w for w in warns
             ),
