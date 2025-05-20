@@ -8,6 +8,11 @@ from typing import Any, Callable, Optional, TypeVar, List, Tuple
 from .core import SecuredResponse, TrustLevel
 from .utils.utils import determine_trust_level
 from .sanitizers.basic import BasicSanitizer
+from .utils.patterns import (
+    WARNING_UNSAFE_DECORATOR_DEFAULT,
+    WARNING_SANITIZATION_SKIPPED,
+    WARNING_INPUT_VALIDATION_FAILED,
+)
 
 
 T = TypeVar("T", bound=Callable[..., Any])
@@ -62,7 +67,7 @@ def unsafe(func: T) -> T:
         return SecuredResponse(
             data=result,
             trust_level=TrustLevel.UNTRUSTED,
-            warnings=["Data from untrusted external source"],
+            warnings=[WARNING_UNSAFE_DECORATOR_DEFAULT],
         )
 
     return wrapper
@@ -121,7 +126,7 @@ def sanitize(
                 return SecuredResponse(
                     data=data,
                     trust_level=original_trust,
-                    warnings=warnings + ["Sanitization explicitly skipped."],
+                    warnings=warnings + [WARNING_SANITIZATION_SKIPPED],
                 )
 
         return wrapper
@@ -153,7 +158,7 @@ def validate_inputs(validator_func: Callable):
                 return SecuredResponse(
                     data=None,  # Block response on input validation failure
                     trust_level=TrustLevel.UNTRUSTED,
-                    warnings=["Input validation failed"],
+                    warnings=[WARNING_INPUT_VALIDATION_FAILED],
                 )
 
             result = await func(*args, **kwargs)

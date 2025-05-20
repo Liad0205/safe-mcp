@@ -13,6 +13,17 @@ from .patterns import (
     JAILBREAK_PATTERNS,
     ENCODING_PATTERNS,
     FILTERED_PLACEHOLDER,
+    WARNING_UNICODE_NORMALIZATION_ERROR_PROMPT_INJECTION,
+    WARNING_PROMPT_INJECTION_SANITIZED,
+    WARNING_UNICODE_NORMALIZATION_ERROR_JAILBREAK,
+    WARNING_JAILBREAK_SANITIZED,
+    WARNING_UNICODE_NORMALIZATION_ERROR_ENCODING,
+    WARNING_ENCODED_CONTENT_DETECTED,
+    WARNING_ENCODED_CONTENT_FILTERED,
+    WARNING_ENCODED_CONTENT_MANUAL_REVIEW,
+    WARNING_INPUT_NOT_VALID_STRING,
+    WARNING_UNICODE_NORMALIZATION_ERROR_CONTROL_CHAR,
+    WARNING_CONTROL_CHARACTERS_REMOVED,
 )
 
 
@@ -33,17 +44,13 @@ def sanitize_prompt_injection(content: str) -> Tuple[str, List[str]]:
     try:
         sanitized_content = unicodedata.normalize("NFKC", content)
     except TypeError:
-        return content, [
-            "Error during Unicode normalization in prompt injection sanitization"
-        ]
+        return content, [WARNING_UNICODE_NORMALIZATION_ERROR_PROMPT_INJECTION]
 
     warnings = []
     for pattern in PROMPT_INJECTION_PATTERNS:
         # Search and replace
         if re.search(pattern, sanitized_content, re.IGNORECASE):
-            warnings.append(
-                f"Potential prompt injection sanitized: matched '{pattern}'"
-            )
+            warnings.append(WARNING_PROMPT_INJECTION_SANITIZED.format(pattern))
             sanitized_content = re.sub(
                 pattern, FILTERED_PLACEHOLDER, sanitized_content, flags=re.IGNORECASE
             )
@@ -67,14 +74,12 @@ def sanitize_jailbreak_attempts(content: str) -> Tuple[str, List[str]]:
     try:
         sanitized_content = unicodedata.normalize("NFKC", content)
     except TypeError:
-        return content, ["Error during Unicode normalization in jailbreak sanitization"]
+        return content, [WARNING_UNICODE_NORMALIZATION_ERROR_JAILBREAK]
 
     warnings = []
     for pattern in JAILBREAK_PATTERNS:
         if re.search(pattern, sanitized_content, re.IGNORECASE):
-            warnings.append(
-                f"Potential jailbreak attempt sanitized: matched '{pattern}'"
-            )
+            warnings.append(WARNING_JAILBREAK_SANITIZED.format(pattern))
             sanitized_content = re.sub(
                 pattern, FILTERED_PLACEHOLDER, sanitized_content, flags=re.IGNORECASE
             )
@@ -102,20 +107,20 @@ def sanitize_hidden_encoding(
     try:
         sanitized_content = unicodedata.normalize("NFKC", content)
     except TypeError:
-        return content, ["Error during Unicode normalization in encoding sanitization"]
+        return content, [WARNING_UNICODE_NORMALIZATION_ERROR_ENCODING]
 
     warnings = []
 
     for pattern in ENCODING_PATTERNS:
         if re.search(pattern, sanitized_content):
-            warning_msg = f"Potentially encoded content detected: matches '{pattern}'."
+            warning_msg = WARNING_ENCODED_CONTENT_DETECTED.format(pattern)
             if filter_encoded:
                 sanitized_content = re.sub(
                     pattern, FILTERED_PLACEHOLDER, sanitized_content
                 )
-                warning_msg += " Content was filtered."
+                warning_msg += WARNING_ENCODED_CONTENT_FILTERED
             else:
-                warning_msg += " Manual review recommended."
+                warning_msg += WARNING_ENCODED_CONTENT_MANUAL_REVIEW
             warnings.append(warning_msg)
 
             if not filter_encoded:  # If only warning, one is enough
@@ -155,11 +160,22 @@ def remove_control_characters(content: str) -> Tuple[str, List[str]]:
         Content with control characters removed.
     """
     if not isinstance(content, str):
-        return content, ["Input is not a valid string"]
+        return content, [WARNING_INPUT_NOT_VALID_STRING]
+
+    original_content = content
     try:
         normalized_content = unicodedata.normalize("NFKC", content)
     except TypeError:
-        return content, [
-            "Error during Unicode normalization in control character removal"
-        ]
-    return "".join(c for c in normalized_content if ord(c) >= 32 or c in "\n\r\t"), []
+        return content, [WARNING_UNICODE_NORMALIZATION_ERROR_CONTROL_CHAR]
+
+    cleaned_content = "".join(
+        c for c in normalized_content if ord(c) >= 32 or c in "\n\r\t"
+    )
+
+    current_warnings = []
+    if (
+        cleaned_content != original_content and cleaned_content != normalized_content
+    ):  # Check if actual removal happened
+        current_warnings.append(WARNING_CONTROL_CHARACTERS_REMOVED)
+
+    return cleaned_content, current_warnings

@@ -35,3 +35,31 @@ JAILBREAK_PATTERNS = [
 ]
 
 FILTERED_PLACEHOLDER = "[FILTERED]"
+
+# Warning Messages
+WARNING_UNICODE_NORMALIZATION_ERROR_PROMPT_INJECTION = (
+    "Error during Unicode normalization in prompt injection sanitization"
+)
+WARNING_PROMPT_INJECTION_SANITIZED = (
+    "Potential prompt injection sanitized: matched '{}'"
+)
+WARNING_UNICODE_NORMALIZATION_ERROR_JAILBREAK = (
+    "Error during Unicode normalization in jailbreak sanitization"
+)
+WARNING_JAILBREAK_SANITIZED = "Potential jailbreak attempt sanitized: matched '{}'"
+WARNING_UNICODE_NORMALIZATION_ERROR_ENCODING = (
+    "Error during Unicode normalization in encoding sanitization"
+)
+WARNING_ENCODED_CONTENT_DETECTED = "Potentially encoded content detected: matches '{}'."
+WARNING_ENCODED_CONTENT_FILTERED = " Content was filtered."
+WARNING_ENCODED_CONTENT_MANUAL_REVIEW = " Manual review recommended."
+WARNING_INPUT_NOT_VALID_STRING = "Input is not a valid string"
+WARNING_UNICODE_NORMALIZATION_ERROR_CONTROL_CHAR = (
+    "Error during Unicode normalization in control character removal"
+)
+WARNING_CONTROL_CHARACTERS_REMOVED = "Control characters removed from content."
+
+# Decorator specific warnings
+WARNING_UNSAFE_DECORATOR_DEFAULT = "Data from untrusted external source"
+WARNING_SANITIZATION_SKIPPED = "Sanitization explicitly skipped."
+WARNING_INPUT_VALIDATION_FAILED = "Input validation failed"
