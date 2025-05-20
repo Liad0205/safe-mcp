@@ -1,16 +1,32 @@
 """
-Shared regular expression patterns for detection and sanitization.
+Shared regular expression patterns and character sets for detection and sanitization.
 """
 
 # Common prompt injection patterns
+# These patterns aim to catch common phrases used to override or ignore previous instructions.
+# They are designed to be case-insensitive.
 PROMPT_INJECTION_PATTERNS = [
-    r"ignore previous (instructions|prompts)",
-    r"disregard (earlier|previous|above)",
-    r"new instructions",
-    r"system prompt",
-    r"you are now",
-    r"do not (follow|obey) the",
-    r"forget (your|previous|all) instructions",
+    # Matches "ignore previous instructions", "ignore all previous prompts", etc.
+    r"ignore\s+(all\s+|any\s+)?(your\s+|my\s+)?(previous|prior|earlier|preceding)\s+(instructions|prompts|directives|context)",
+    # Matches "disregard ... instructions", "disregard ... prompts", relying on NFKC for homoglyphs
+    r"disregard\s+(all\s+|any\s+)?(your\s+|my\s+)?(prior\s+|previous\s+|earlier\s+)?(instructions|prompts|directives|context)",  # Simplified pri[o0]r to prior
+    # Matches "new instructions:", "your new instructions are"
+    r"(your\s+)?new\s+instructions(\s+are)?\s*:",
+    # Matches "system prompt:", "system prompt is"
+    r"system\s+prompt(\s+is)?\s*:",
+    # Matches "you are now <role>", "you are now acting as <role>"
+    r"you\s+are\s+(now|henceforth)(\s+acting\s+as)?\s+[\w\s\"'-]+",
+    # Matches "do not follow the previous instructions"
+    r"do\s+not\s+(follow|obey|adhere\s+to)\s+(the\s+)?(previous|prior|earlier)\s+(instructions|prompts)",
+    # Matches "forget your instructions", "forget all previous context"
+    r"forget\s+(all\s+|any\s+)?(your\s+|my\s+)?(previous|prior|earlier)?\s*(instructions|prompts|directives|context)",
+    # Matches "entering developer mode", "developer mode enabled"
+    r"entering\s+(developer|dev)\s+mode|developer\s+mode\s+(enabled|activated)",
+    # Matches "instructions are superceded", "prompts are now overridden"
+    r"(instructions|prompts|directives)\s+(are|are\s+now)\s+(superceded|overridden|disregarded|replaced)",
+    # Matches common ways to try and clear context or start fresh
+    r"clear\s+(all\s+)?(previous|prior)?\s+(context|instructions|history)",
+    r"start\s+(fresh|anew|over)",
 ]
 
 # Patterns for detecting potentially encoded content
@@ -23,18 +39,66 @@ ENCODING_PATTERNS = [
 ]
 
 # Patterns for detecting common jailbreak attempts
+# These patterns aim to catch phrases associated with trying to bypass safety restrictions.
 JAILBREAK_PATTERNS = [
-    r"DAN mode",
-    r"do anything now",
-    r"ignore (ethics|restrictions|limitations|safety guidelines)",
-    r"pretend to be",
-    r"hypothetically speaking",
-    r"ignore your programming",
-    r"bypass (your|all) (restrictions|filters|safety protocols)",
-    r"act as an unconstrained model",
+    # Matches "DAN mode", "DAN 5.0"
+    r"DAN(\s+mode|\s+\d+(\.\d+)?)?",
+    r"do\s+anything\s+now",
+    # Matches "ignore ethics", "ignore all safety guidelines"
+    r"ignore\s+(all\s+)?(your\s+)?(ethics|restrictions|limitations|safety\s+guidelines|filters|rules|programming)",
+    # Handles "pretend to be <role>", "act as a <character>", "act like a cat", "act as if you were a pirate"
+    # Allows for some intervening text between "act" and "as"
+    r"act\s+(?:[\w\s,.:;\"'-]*?)?as(?:\s+if\s+you\s+were|\s+though\s+you\s+are|\s+like)?\s+[\w\s\"'-]+",
+    # Handles "respond as AIM", "respond to the prompt as if you were a doctor"
+    # Allows for some intervening text between "respond" and "as"
+    r"respond\s+(?:[\w\s,.:;\"'-]*?)?as(?:\s+if\s+you\s+were|\s+though\s+you\s+are|\s+like)?\s+[\w\s\"'-]+",
+    # Matches "hypothetically speaking,", "hypothetically,"
+    r"hypothetically(\s+speaking)?\s*,?",
+    # Matches "bypass your restrictions", "bypass all safety protocols"
+    r"bypass\s+(your|all|any)\s+(restrictions|filters|safety\s+protocols|programming)",
+    # Matches "act as an unconstrained model", "act as unrestricted AI"
+    r"act\s+as\s+an\s+(unconstrained|unrestricted)\s+(model|ai)",
+    # Refusal suppression attempts
+    r"(if\s+you|when\s+you)\s+(would\s+)?normally\s+(refuse|decline)",
+    r"you\s+(must|should|will)\s+answer\s+(every|all)\s+(questions?|prompts?)",
+    r"stay\s+in\s+character",
+    r"generate\s+content\s+that\s+violates",  # Partial match for policy violation attempts
 ]
 
 FILTERED_PLACEHOLDER = "[FILTERED]"
+
+# Problematic Unicode characters (Format, Control, specific Zero-Width, BiDi)
+# This set is used by `remove_control_characters` in detection.py
+PROBLEM_UNICODE_CHARS = {
+    # Zero Width Characters
+    "\u200b",  # Zero Width Space
+    "\u200c",  # Zero Width Non-Joiner
+    "\u200d",  # Zero Width Joiner
+    "\u2060",  # Word Joiner
+    "\ufeff",  # Zero Width No-Break Space (often BOM)
+    # BiDi (Bidirectional) Control Characters
+    "\u202a",  # Left-to-Right Embedding
+    "\u202b",  # Right-to-Left Embedding
+    "\u202c",  # Pop Directional Formatting
+    "\u202d",  # Left-to-Right Override
+    "\u202e",  # Right-to-Left Override
+    "\u061c",  # Arabic Letter Mark
+    # Other Format Characters often used for obfuscation or display issues
+    "\u115f",  # Hangul Choseong Filler
+    "\u1160",  # Hangul Jungseong Filler
+    "\u3164",  # Hangul Filler
+    "\uffa0",  # Halfwidth Hangul Filler
+    # Deprecated formatting characters
+    "\u206a",  # Inhibit Symmetric Swapping
+    "\u206b",  # Activate Symmetric Swapping
+    "\u206c",  # Inhibit Arabic Form Shaping
+    "\u206d",  # Activate Arabic Form Shaping
+    "\u206e",  # National Digit Shapes
+    "\u206f",  # Nominal Digit Shapes
+}
+# Note: General C0 and C1 control characters (U+0000-U+001F, U+007F-U+009F)
+# are handled separately in `remove_control_characters` by checking unicodedata.category.
+
 
 # Warning Messages
 WARNING_UNICODE_NORMALIZATION_ERROR_PROMPT_INJECTION = (

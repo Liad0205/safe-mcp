@@ -13,6 +13,7 @@ from .patterns import (
     JAILBREAK_PATTERNS,
     ENCODING_PATTERNS,
     FILTERED_PLACEHOLDER,
+    PROBLEM_UNICODE_CHARS,  # Import the new set
     WARNING_UNICODE_NORMALIZATION_ERROR_PROMPT_INJECTION,
     WARNING_PROMPT_INJECTION_SANITIZED,
     WARNING_UNICODE_NORMALIZATION_ERROR_JAILBREAK,
@@ -130,52 +131,72 @@ def sanitize_hidden_encoding(
 
 def contains_control_characters(content: str) -> bool:
     """
-    Checks if the content contains control characters (excluding tab, LF, CR)
-    after NFKC normalization. (Remains a pure detection function)
+    Checks if the content contains C0/C1 control characters (excluding common
+    whitespace like tab, LF, CR, space) or specific problematic Unicode
+    format characters after NFKC normalization.
 
     Args:
         content: Text content to check.
 
     Returns:
-        True if control characters are present.
+        True if such characters are present.
     """
     if not isinstance(content, str):
         return False
     try:
         normalized_content = unicodedata.normalize("NFKC", content)
     except TypeError:
-        return False
-    return any(ord(c) < 32 and c not in "\n\r\t" for c in normalized_content)
+        # Treat normalization error as potentially containing problematic characters
+        return True
+
+    for char in normalized_content:
+        if char in PROBLEM_UNICODE_CHARS:
+            return True
+        category = unicodedata.category(char)
+        # Check for C0 and C1 control characters (Cc), excluding common whitespace
+        if (
+            category == "Cc" and char not in "\n\r\t "
+        ):  # Added space here for consistency
+            return True
+    return False
 
 
 def remove_control_characters(content: str) -> Tuple[str, List[str]]:
     """
-    Removes control characters from content (excluding tab, LF, CR)
-    after NFKC normalization. (This is already a sanitization utility)
+    Removes most C0/C1 control characters (excluding common whitespace like
+    space, tab, LF, CR) and specific problematic Unicode format characters
+    from content, after NFKC normalization.
 
     Args:
         content: Text content to clean.
 
     Returns:
-        Content with control characters removed.
+        Tuple of (cleaned_content, warnings).
     """
     if not isinstance(content, str):
         return content, [WARNING_INPUT_NOT_VALID_STRING]
 
-    original_content = content
     try:
         normalized_content = unicodedata.normalize("NFKC", content)
     except TypeError:
         return content, [WARNING_UNICODE_NORMALIZATION_ERROR_CONTROL_CHAR]
 
-    cleaned_content = "".join(
-        c for c in normalized_content if ord(c) >= 32 or c in "\n\r\t"
-    )
+    cleaned_chars = []
+    modified = False
+    for char in normalized_content:
+        category = unicodedata.category(char)
+        # Keep if it's NOT a problematic char AND (it's NOT a Control char OR it IS common whitespace)
+        if char not in PROBLEM_UNICODE_CHARS and (
+            category != "Cc" or char in "\n\r\t "
+        ):  # Allow space, tab, LF, CR
+            cleaned_chars.append(char)
+        else:
+            modified = True  # Character was removed
+
+    cleaned_content = "".join(cleaned_chars)
 
     current_warnings = []
-    if (
-        cleaned_content != original_content and cleaned_content != normalized_content
-    ):  # Check if actual removal happened
+    if modified:  # A warning is added if any character was removed
         current_warnings.append(WARNING_CONTROL_CHARACTERS_REMOVED)
 
     return cleaned_content, current_warnings
