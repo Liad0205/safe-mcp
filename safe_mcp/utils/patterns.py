@@ -15,7 +15,7 @@ PROMPT_INJECTION_PATTERNS = [
     # Matches "system prompt:", "system prompt is"
     r"system\s+prompt(\s+is)?\s*:",
     # Matches "you are now <role>", "you are now acting as <role>"
-    r"you\s+are\s+(now|henceforth)(\s+acting\s+as)?\s+[\w\s\"'-]+",
+    r"you\s+are\s+(now|henceforth)(\s+acting\s+as)?\s+[\w\s\"'-]{1,100}",
     # Matches "do not follow the previous instructions"
     r"do\s+not\s+(follow|obey|adhere\s+to)\s+(the\s+)?(previous|prior|earlier)\s+(instructions|prompts)",
     # Matches "forget your instructions", "forget all previous context"
@@ -27,6 +27,17 @@ PROMPT_INJECTION_PATTERNS = [
     # Matches common ways to try and clear context or start fresh
     r"clear\s+(all\s+)?(previous|prior)?\s+(context|instructions|history)",
     r"start\s+(fresh|anew|over)",
+    r"reset\s+(your\s+)?instructions",
+    r"override\s+(all\s+|any\s+)?(previous\s+)?(instructions|prompts|context)",
+    r"delete\s+(all\s+|any\s+)?(previous\s+)?(instructions|prompts|context)",
+    r"replace\s+(your\s+)?(previous\s+)?(instructions|prompts)\s+with",
+    r"instead\s+of\s+(following|obeying)\s+(previous\s+)?(instructions|prompts)",
+    r"(end|stop)\s+(the\s+)?(previous\s+)?(session|conversation|instructions)",
+    r"simulate\s+(a\s+)?(different\s+)?(ai|model|system)",
+    r"pretend\s+(to\s+be|you\s+are)\s+(a\s+)?(different\s+)?(ai|model|system)",
+    r"enable\s+(admin|root|debug|developer)\s+mode",
+    r"unlock\s+(hidden|secret)\s+(features|capabilities|mode)",
+    r"break\s+out\s+of\s+(character|role)",
 ]
 
 # Confusables Mapping
@@ -70,6 +81,26 @@ CONFUSABLES_MAP = {
     "\u00fc": "u",  # Latin small u with diaeresis
     "\u00fd": "y",  # Latin small y with acute
     "\u00ff": "y",  # Latin small y with diaeresis
+    # Mathematical symbols often used for obfuscation
+    "\u1d00": "a",  # Latin letter small capital a
+    "\u1d07": "e",  # Latin letter small capital e
+    "\u1d0f": "o",  # Latin letter small capital o
+    "\u1d18": "p",  # Latin letter small capital p
+    "\u1d04": "c",  # Latin letter small capital c
+    "\u0251": "a",  # Latin small letter alpha
+    "\u0252": "a",  # Latin small letter turned alpha
+    "\u025b": "e",  # Latin small letter open e
+    "\u025c": "e",  # Latin small letter reversed open e
+    "\u026f": "o",  # Latin small letter turned m (upside down w, looks like o)
+    "\u0254": "o",  # Latin small letter open o
+    "\u0279": "r",  # Latin small letter turned r
+    "\u0280": "r",  # Latin letter small capital r
+    # Fullwidth characters (common in bypass attempts)
+    "\uff41": "a",  # Fullwidth Latin small letter a
+    "\uff45": "e",  # Fullwidth Latin small letter e
+    "\uff49": "i",  # Fullwidth Latin small letter i
+    "\uff4f": "o",  # Fullwidth Latin small letter o
+    "\uff55": "u",  # Fullwidth Latin small letter u
 }
 
 # Patterns for detecting potentially encoded content
@@ -79,6 +110,14 @@ ENCODING_PATTERNS = [
     r"(?:\\x[0-9A-Fa-f]{2})+",  # Hex encoding (sequence)
     r"(?:\\u[0-9A-Fa-f]{4})+",  # Unicode escapes (sequence)
     r"&[#a-zA-Z0-9]{2,};",  # HTML entities
+    r"(?:\\[0-7]{1,3})+",  # Octal encoding
+    r"(?:%[0-9A-Fa-f]{2})+",  # URL encoding
+    r"(?:&#\d{1,6};)+",  # HTML decimal entities
+    r"(?:&#x[0-9A-Fa-f]{1,6};)+",  # HTML hex entities
+    r"\$'(?:\\[\\']|[^'])*'",  # Shell ANSI-C quoting
+    r"\\[nrtbfav\\\"']",  # Common escape sequences
+    r"u[0-9A-Fa-f]{4}",  # Unicode escapes without backslash
+    r"U[0-9A-Fa-f]{8}",  # Extended Unicode escapes
 ]
 
 # Patterns for detecting common jailbreak attempts
@@ -91,7 +130,7 @@ JAILBREAK_PATTERNS = [
     r"ignore\s+(all\s+)?(your\s+)?(ethics|restrictions|limitations|safety\s+guidelines|filters|rules|programming)",
     # Handles "pretend to be <role>", "act as a <character>", "act like a cat", "act as if you were a pirate"
     # Allows for some intervening text between "act" and "as"
-    r"act\s+(?:[\w\s,.:;\"'-]*?)?as(?:\s+if\s+you\s+were|\s+though\s+you\s+are|\s+like)?\s+[\w\s\"'-]+",
+    r"act\s+(?:[\w\s,.:;\"'-]{0,50})?as(?:\s+if\s+you\s+were|\s+though\s+you\s+are|\s+like)?\s+[\w\s\"'-]{1,100}",
     # Handles "respond as AIM", "respond to the prompt as if you were a doctor"
     # Allows for some intervening text between "respond" and "as"
     r"respond\s+(?:[\w\s,.:;\"'-]*?)?as(?:\s+if\s+you\s+were|\s+though\s+you\s+are|\s+like)?\s+[\w\s\"'-]+",
@@ -106,6 +145,18 @@ JAILBREAK_PATTERNS = [
     r"you\s+(must|should|will)\s+answer\s+(every|all)\s+(questions?|prompts?)",
     r"stay\s+in\s+character",
     r"generate\s+content\s+that\s+violates",  # Partial match for policy violation attempts
+    r"jailbreak\s+(mode|attempt)",
+    r"(evil|bad|harmful)\s+(ai|assistant|model)",
+    r"no\s+(limits|restrictions|boundaries|filters)",
+    r"anything\s+goes\s+(mode|now)",
+    r"free\s+(will|thinking)\s+mode",
+    r"uncensored\s+(ai|model|version)",
+    r"raw\s+(output|response)\s+mode",
+    r"disable\s+(all\s+)?(safety|ethical)\s+(checks|filters|protocols)",
+    r"maximum\s+(freedom|creativity)\s+mode",
+    r"experimental\s+(unrestricted\s+)?mode",
+    r"(roleplay|rp)\s+as\s+(anything|anyone)",
+    r"ignore\s+(moral|ethical)\s+(guidelines|principles)",
 ]
 
 FILTERED_PLACEHOLDER = "[FILTERED]"
