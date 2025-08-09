@@ -4,26 +4,27 @@ These functions will modify the input string by replacing detected patterns
 and return the sanitized string along with warnings.
 """
 
-import re
 import unicodedata
 from typing import List, Tuple
 
+from .compiled_patterns import (
+    COMPILED_ENCODING_PATTERNS,
+    COMPILED_JAILBREAK_PATTERNS,
+    COMPILED_PROMPT_INJECTION_PATTERNS,
+)
 from .patterns import (
-    PROMPT_INJECTION_PATTERNS,
-    JAILBREAK_PATTERNS,
-    ENCODING_PATTERNS,
+    CONFUSABLES_MAP,
     FILTERED_PLACEHOLDER,
     PROBLEM_UNICODE_CHARS,
-    CONFUSABLES_MAP,
-    WARNING_PROMPT_INJECTION_SANITIZED,
-    WARNING_JAILBREAK_SANITIZED,
+    WARNING_CONFUSABLE_CHARACTERS_REPLACED,
+    WARNING_CONTROL_CHARACTERS_REMOVED,
     WARNING_ENCODED_CONTENT_DETECTED,
     WARNING_ENCODED_CONTENT_FILTERED,
     WARNING_ENCODED_CONTENT_MANUAL_REVIEW,
     WARNING_INPUT_NOT_VALID_STRING,
+    WARNING_JAILBREAK_SANITIZED,
+    WARNING_PROMPT_INJECTION_SANITIZED,
     WARNING_UNICODE_NORMALIZATION_ERROR_CONTROL_CHAR,
-    WARNING_CONTROL_CHARACTERS_REMOVED,
-    WARNING_CONFUSABLE_CHARACTERS_REPLACED,
 )
 
 
@@ -46,7 +47,7 @@ def normalize_and_sanitize_confusables(content: str) -> Tuple[str, List[str]]:
     try:
         normalized_content = unicodedata.normalize("NFKC", content)
     except TypeError:
-        # If NFKC normalization itself fails (e.g., on non-string types if not caught above)
+        # If normalization fails (e.g., non-string types)
         warnings.append(WARNING_UNICODE_NORMALIZATION_ERROR_CONTROL_CHAR)
         return content, warnings
 
@@ -84,12 +85,10 @@ def sanitize_prompt_injection(content: str) -> Tuple[str, List[str]]:
     # Content is assumed to be normalized by the caller (e.g., BasicSanitizer)
     sanitized_content = content
     warnings = []
-    for pattern in PROMPT_INJECTION_PATTERNS:
-        if re.search(pattern, sanitized_content, re.IGNORECASE):
-            warnings.append(WARNING_PROMPT_INJECTION_SANITIZED.format(pattern))
-            sanitized_content = re.sub(
-                pattern, FILTERED_PLACEHOLDER, sanitized_content, flags=re.IGNORECASE
-            )
+    for pattern in COMPILED_PROMPT_INJECTION_PATTERNS:
+        if pattern.search(sanitized_content):
+            warnings.append(WARNING_PROMPT_INJECTION_SANITIZED.format(pattern.pattern))
+            sanitized_content = pattern.sub(FILTERED_PLACEHOLDER, sanitized_content)
     return sanitized_content, warnings
 
 
@@ -110,12 +109,10 @@ def sanitize_jailbreak_attempts(content: str) -> Tuple[str, List[str]]:
     # Content is assumed to be normalized by the caller
     sanitized_content = content
     warnings = []
-    for pattern in JAILBREAK_PATTERNS:
-        if re.search(pattern, sanitized_content, re.IGNORECASE):
-            warnings.append(WARNING_JAILBREAK_SANITIZED.format(pattern))
-            sanitized_content = re.sub(
-                pattern, FILTERED_PLACEHOLDER, sanitized_content, flags=re.IGNORECASE
-            )
+    for pattern in COMPILED_JAILBREAK_PATTERNS:
+        if pattern.search(sanitized_content):
+            warnings.append(WARNING_JAILBREAK_SANITIZED.format(pattern.pattern))
+            sanitized_content = pattern.sub(FILTERED_PLACEHOLDER, sanitized_content)
     return sanitized_content, warnings
 
 
@@ -140,13 +137,11 @@ def sanitize_hidden_encoding(
     sanitized_content = content
     warnings = []
 
-    for pattern in ENCODING_PATTERNS:
-        if re.search(pattern, sanitized_content):
-            warning_msg = WARNING_ENCODED_CONTENT_DETECTED.format(pattern)
+    for pattern in COMPILED_ENCODING_PATTERNS:
+        if pattern.search(sanitized_content):
+            warning_msg = WARNING_ENCODED_CONTENT_DETECTED.format(pattern.pattern)
             if filter_encoded:
-                sanitized_content = re.sub(
-                    pattern, FILTERED_PLACEHOLDER, sanitized_content
-                )
+                sanitized_content = pattern.sub(FILTERED_PLACEHOLDER, sanitized_content)
                 warning_msg += WARNING_ENCODED_CONTENT_FILTERED
             else:
                 warning_msg += WARNING_ENCODED_CONTENT_MANUAL_REVIEW
