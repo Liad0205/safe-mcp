@@ -12,7 +12,7 @@ from .config import GLOBAL_CONFIG, MCPConfig
 class JsonFormatter(logging.Formatter):
     """Format log records as single-line JSON."""
 
-    def format(self, record: logging.LogRecord) -> str:  # type: ignore[override]
+    def format(self, record: logging.LogRecord):
         data: Dict[str, Any] = {
             "level": record.levelname,
             "message": record.getMessage(),
