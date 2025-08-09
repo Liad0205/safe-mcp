@@ -2,9 +2,9 @@
 Core types and classes for safe-mcp.
 """
 
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, List
-from pydantic import BaseModel, Field
 
 
 class TrustLevel(str, Enum):
@@ -19,23 +19,25 @@ class TrustLevel(str, Enum):
     UNTRUSTED = "untrusted"  # Unknown or external source, likely unsafe
 
 
-class SecuredResponse(BaseModel):
-    """
-    Container for MCP tool responses with security metadata.
+@dataclass
+class SecuredResponse:
+    """Container for MCP tool responses with security metadata.
 
-    This wrapper provides LLMs with context about how much to trust
-    the data returned by MCP tools.
+    This lightweight dataclass replacement mirrors the small subset of
+    ``pydantic`` functionality required by the library.  It stores the
+    response ``data`` along with a ``trust_level`` flag and optional
+    ``warnings`` describing any security concerns.
     """
 
     data: Any
     trust_level: TrustLevel
-    warnings: List[str] = Field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
 
-    def model_post_init(self, __context):
-        """
-        Validate the response after initialization.
+    def __post_init__(self) -> None:
+        """Validate the response after initialization.
 
-        Ensures that unsafe responses always have warnings explaining why.
+        Ensures that unsafe responses always contain at least one warning so
+        that downstream consumers are made aware of the potential risk.
         """
         if self.trust_level == TrustLevel.UNTRUSTED and not self.warnings:
             self.warnings = ["Data from untrusted source"]

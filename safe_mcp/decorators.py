@@ -1,18 +1,19 @@
-"""
-Decorators for securing MCP tool functions.
-"""
+"""Decorators for securing MCP tool functions."""
 
 import functools
-from typing import Any, Callable, Optional, TypeVar, List, Tuple
+import hashlib
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar
 
 from .core import SecuredResponse, TrustLevel
-from .utils.utils import determine_trust_level
+from .llm_validator import LLMValidator
 from .sanitizers.basic import BasicSanitizer
 from .utils.patterns import (
-    WARNING_UNSAFE_DECORATOR_DEFAULT,
-    WARNING_SANITIZATION_SKIPPED,
     WARNING_INPUT_VALIDATION_FAILED,
+    WARNING_LLM_VALIDATION_FAILED,
+    WARNING_SANITIZATION_SKIPPED,
+    WARNING_UNSAFE_DECORATOR_DEFAULT,
 )
+from .utils.utils import determine_trust_level
 
 
 T = TypeVar("T", bound=Callable[..., Any])
@@ -167,6 +168,55 @@ def validate_inputs(validator_func: Callable):
                 result = SecuredResponse(data=result, trust_level=TrustLevel.UNTRUSTED)
 
             return result
+
+        return wrapper
+
+    return decorator
+
+
+def secure(validator: LLMValidator, modules: Iterable[str] = ()):
+    """Validate function output using an LLM provider.
+
+    The decorator uses the supplied :class:`LLMValidator` to determine whether
+    the content returned by the decorated function is safe.  When a cache is
+    configured on the validator the result is cached using a key comprised of
+    the content hash and the provided module list.
+    """
+
+    def decorator(func: T) -> T:
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            result = await func(*args, **kwargs)
+
+            if isinstance(result, SecuredResponse):
+                data = result.data
+                trust = result.trust_level
+                warnings = list(result.warnings)
+            else:
+                data = result
+                trust = TrustLevel.UNTRUSTED
+                warnings = []
+
+            content_str = str(data)
+            content_hash = hashlib.sha256(content_str.encode("utf-8")).hexdigest()
+            key = (content_hash, tuple(modules))
+
+            cache = validator.cache_provider
+            cached = cache.get(key) if cache is not None else None
+            if cached is None:
+                is_safe = await validator.validate(content_str, tuple(modules))
+                if cache is not None:
+                    cache[key] = is_safe
+            else:
+                is_safe = cached
+
+            if not is_safe:
+                trust = TrustLevel.UNTRUSTED
+                warnings.append(WARNING_LLM_VALIDATION_FAILED)
+            elif trust == TrustLevel.UNTRUSTED:
+                trust = TrustLevel.TRUSTED
+
+            return SecuredResponse(data=data, trust_level=trust, warnings=warnings)
 
         return wrapper
 
