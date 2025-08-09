@@ -57,30 +57,6 @@ CONFUSABLES_MAP = {
     "\u03f2": "c",  # Greek lunate sigma symbol (looks like c)
     "\u03c7": "x",  # Greek small chi
     # Latin
-    "\u00e0": "a",  # Latin small a with grave
-    "\u00e1": "a",  # Latin small a with acute
-    "\u00e2": "a",  # Latin small a with circumflex
-    "\u00e3": "a",  # Latin small a with tilde
-    "\u00e4": "a",  # Latin small a with diaeresis
-    "\u00e5": "a",  # Latin small a with ring above
-    "\u00e7": "c",  # Latin small c with cedilla
-    "\u00e8": "e",  # Latin small e with grave
-    "\u00e9": "e",  # Latin small e with acute
-    "\u00ea": "e",  # Latin small e with circumflex
-    "\u00eb": "e",  # Latin small e with diaeresis
-    "\u00f0": "d",  # Latin small eth
-    "\u00f1": "n",  # Latin small n with tilde
-    "\u00f2": "o",  # Latin small o with grave
-    "\u00f3": "o",  # Latin small o with acute
-    "\u00f4": "o",  # Latin small o with circumflex
-    "\u00f5": "o",  # Latin small o with tilde
-    "\u00f6": "o",  # Latin small o with diaeresis
-    "\u00f9": "u",  # Latin small u with grave
-    "\u00fa": "u",  # Latin small u with acute
-    "\u00fb": "u",  # Latin small u with circumflex
-    "\u00fc": "u",  # Latin small u with diaeresis
-    "\u00fd": "y",  # Latin small y with acute
-    "\u00ff": "y",  # Latin small y with diaeresis
     # Mathematical symbols often used for obfuscation
     "\u1d00": "a",  # Latin letter small capital a
     "\u1d07": "e",  # Latin letter small capital e
@@ -224,3 +200,4 @@ WARNING_CONFUSABLE_CHARACTERS_REPLACED = (
 WARNING_UNSAFE_DECORATOR_DEFAULT = "Data from untrusted external source"
 WARNING_SANITIZATION_SKIPPED = "Sanitization explicitly skipped."
 WARNING_INPUT_VALIDATION_FAILED = "Input validation failed"
+WARNING_LLM_VALIDATION_FAILED = "LLM validation failed"
