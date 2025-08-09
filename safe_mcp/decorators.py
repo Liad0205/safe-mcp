@@ -12,7 +12,13 @@ from .utils.patterns import (
     WARNING_UNSAFE_DECORATOR_DEFAULT,
     WARNING_SANITIZATION_SKIPPED,
     WARNING_INPUT_VALIDATION_FAILED,
+    WARNING_AUTH_TOKEN_MISSING,
+    WARNING_AUTH_TOKEN_INVALID,
+    WARNING_RATE_LIMIT_EXCEEDED,
 )
+from .config import config
+import asyncio
+import time
 
 
 T = TypeVar("T", bound=Callable[..., Any])
@@ -171,3 +177,119 @@ def validate_inputs(validator_func: Callable):
         return wrapper
 
     return decorator
+
+
+def _extract_token(obj: Any) -> Optional[str]:
+    """Attempt to extract an auth token from various object types."""
+
+    if obj is None:
+        return None
+
+    # Dictionary-like objects
+    if isinstance(obj, dict):
+        for key in ("token", "auth", "authorization"):
+            if key in obj and obj[key]:
+                return obj[key]
+        headers = obj.get("headers")
+        if isinstance(headers, dict):
+            for key in ("Authorization", "authorization", "token", "auth"):
+                if headers.get(key):
+                    return headers[key]
+        return None
+
+    # Objects with attributes
+    for key in ("token", "auth", "authorization"):
+        if hasattr(obj, key):
+            value = getattr(obj, key)
+            if value:
+                return value
+    if hasattr(obj, "headers"):
+        headers = getattr(obj, "headers")
+        if isinstance(headers, dict):
+            for key in ("Authorization", "authorization", "token", "auth"):
+                if headers.get(key):
+                    return headers[key]
+    return None
+
+
+def require_auth(func: T) -> T:
+    """Require a valid authentication token before executing the function."""
+
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        token = None
+
+        # Check common locations for context or request objects
+        for key in ("context", "request"):
+            if key in kwargs:
+                token = _extract_token(kwargs[key])
+                if token:
+                    break
+
+        if token is None and args:
+            # Fallback: inspect positional arguments
+            for arg in args:
+                token = _extract_token(arg)
+                if token:
+                    break
+
+        if token is None:
+            return SecuredResponse(
+                data=None,
+                trust_level=TrustLevel.UNTRUSTED,
+                warnings=[WARNING_AUTH_TOKEN_MISSING],
+            )
+
+        validator = config.auth_validator
+        valid = False
+        if callable(validator):
+            try:
+                valid = bool(validator(token))
+            except Exception:
+                valid = False
+
+        if not valid:
+            return SecuredResponse(
+                data=None,
+                trust_level=TrustLevel.UNTRUSTED,
+                warnings=[WARNING_AUTH_TOKEN_INVALID],
+            )
+
+        return await func(*args, **kwargs)
+
+    return wrapper
+
+
+def ratelimit(func: T) -> T:
+    """Apply a simple token bucket rate limiter to the decorated function."""
+
+    bucket = {"tokens": config.ratelimit_capacity, "last_refill": time.monotonic()}
+    lock = asyncio.Lock()
+
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        async with lock:
+            now = time.monotonic()
+            capacity = config.ratelimit_capacity
+            rate = config.ratelimit_refill_rate
+
+            # Refill tokens based on elapsed time
+            elapsed = now - bucket["last_refill"]
+            if elapsed > 0:
+                bucket["tokens"] = min(
+                    capacity, bucket["tokens"] + elapsed * rate
+                )
+                bucket["last_refill"] = now
+
+            if bucket["tokens"] < 1:
+                return SecuredResponse(
+                    data=None,
+                    trust_level=TrustLevel.UNTRUSTED,
+                    warnings=[WARNING_RATE_LIMIT_EXCEEDED],
+                )
+
+            bucket["tokens"] -= 1
+
+        return await func(*args, **kwargs)
+
+    return wrapper
