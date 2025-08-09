@@ -224,3 +224,6 @@ WARNING_CONFUSABLE_CHARACTERS_REPLACED = (
 WARNING_UNSAFE_DECORATOR_DEFAULT = "Data from untrusted external source"
 WARNING_SANITIZATION_SKIPPED = "Sanitization explicitly skipped."
 WARNING_INPUT_VALIDATION_FAILED = "Input validation failed"
+WARNING_AUTH_TOKEN_MISSING = "Authentication token missing"
+WARNING_AUTH_TOKEN_INVALID = "Invalid authentication token"
+WARNING_RATE_LIMIT_EXCEEDED = "Rate limit exceeded"
